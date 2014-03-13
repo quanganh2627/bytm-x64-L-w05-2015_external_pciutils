@@ -37,12 +37,13 @@ sysfs_name(struct pci_access *a)
 static int
 sysfs_detect(struct pci_access *a)
 {
-  if (access(sysfs_name(a), R_OK))
+  char *ch = sysfs_name(a);
+  if (((NULL == ch) ? 1 : access(ch, R_OK)))
     {
-      a->debug("...cannot open %s", sysfs_name(a));
+      a->debug("...cannot open %s", ch);
       return 0;
     }
-  a->debug("...using %s", sysfs_name(a));
+  a->debug("...using %s", ch);
   return 1;
 }
 
@@ -79,8 +80,14 @@ sysfs_cleanup(struct pci_access *a)
 static void
 sysfs_obj_name(struct pci_dev *d, char *object, char *buf)
 {
-  int n = snprintf(buf, OBJNAMELEN, "%s/devices/%04x:%02x:%02x.%d/%s",
-		   sysfs_name(d->access), d->domain, d->bus, d->dev, d->func, object);
+  char *ch = sysfs_name(d->access);
+  int n = -1;
+
+  if (NULL != ch)
+    {
+      n = snprintf(buf, OBJNAMELEN, "%s/devices/%04x:%02x:%02x.%d/%s",
+		   ch, d->domain, d->bus, d->dev, d->func, object);
+    }
   if (n < 0 || n >= OBJNAMELEN)
     d->access->error("File name too long");
 }
@@ -117,7 +124,10 @@ sysfs_get_resources(struct pci_dev *d)
   sysfs_obj_name(d, "resource", namebuf);
   file = fopen(namebuf, "r");
   if (!file)
-    a->error("Cannot open %s: %s", namebuf, strerror(errno));
+    {
+      a->error("Cannot open %s: %s", namebuf, strerror(errno));
+      return;
+    }
   for (i = 0; i < 7; i++)
     {
       unsigned long long start, end, size, flags;
@@ -149,14 +159,22 @@ static void sysfs_scan(struct pci_access *a)
   char dirname[1024];
   DIR *dir;
   struct dirent *entry;
-  int n;
-
-  n = snprintf(dirname, sizeof(dirname), "%s/devices", sysfs_name(a));
+  int n = -1;
+  char *ch = sysfs_name(a);
+ 
+  if (NULL != ch)
+    n = snprintf(dirname, sizeof(dirname), "%s/devices", ch);
   if (n < 0 || n >= (int) sizeof(dirname))
-    a->error("Directory name too long");
+    {
+      a->error("Directory name too long");
+      return;
+    }
   dir = opendir(dirname);
   if (!dir)
-    a->error("Cannot open %s", dirname);
+    {
+      a->error("Cannot open %s", dirname);
+      return;
+    }
   while ((entry = readdir(dir)))
     {
       struct pci_dev *d;
@@ -166,7 +184,8 @@ static void sysfs_scan(struct pci_access *a)
       if (entry->d_name[0] == '.')
 	continue;
 
-      d = pci_alloc_dev(a);
+      if (NULL == (d = pci_alloc_dev(a)))
+        break;
       if (sscanf(entry->d_name, "%x:%x:%x.%d", &dom, &bus, &dev, &func) < 4)
 	a->error("sysfs_scan: Couldn't parse entry name %s", entry->d_name);
       d->domain = dom;
@@ -197,16 +216,21 @@ sysfs_fill_slots(struct pci_access *a)
   char dirname[1024];
   DIR *dir;
   struct dirent *entry;
-  int n;
+  int n = -1;
+  char *ch = sysfs_name(a);
 
-  n = snprintf(dirname, sizeof(dirname), "%s/slots", sysfs_name(a));
+  if (NULL != ch)
+    n = snprintf(dirname, sizeof(dirname), "%s/slots", ch);
   if (n < 0 || n >= (int) sizeof(dirname))
-    a->error("Directory name too long");
+    {
+      a->error("Directory name too long");
+      return;
+    }
   dir = opendir(dirname);
   if (!dir)
     return;
 
-  while (entry = readdir(dir))
+  while (NULL != (entry = readdir(dir)))
     {
       char namebuf[OBJNAMELEN], buf[16];
       FILE *file;
@@ -237,6 +261,8 @@ sysfs_fill_slots(struct pci_access *a)
 	    if (dom == d->domain && bus == d->bus && dev == d->dev && !d->phy_slot)
 	      {
 		d->phy_slot = pci_malloc(a, strlen(entry->d_name) + 1);
+                if (NULL == d->phy_slot)
+                  break;
 		strcpy(d->phy_slot, entry->d_name);
 	      }
 	}

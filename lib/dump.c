@@ -35,6 +35,8 @@ static void
 dump_alloc_data(struct pci_dev *dev, int len)
 {
   struct dump_data *dd = pci_malloc(dev->access, sizeof(struct dump_data) + len - 1);
+  if (NULL == dd)
+    return;
   dd->allocated = len;
   dd->len = 0;
   memset(dd->data, 0xff, len);
@@ -56,16 +58,24 @@ dump_validate(char *s, char *fmt)
 static void
 dump_init(struct pci_access *a)
 {
-  char *name = pci_get_param(a, "dump.name");
+  char *name;
   FILE *f;
   char buf[256];
   struct pci_dev *dev = NULL;
   int len, mn, bn, dn, fn, i, j;
 
   if (!a)
-    a->error("dump: File name not given.");
+    {
+      return;
+    }
+  name = pci_get_param(a, "dump.name");
+  if (NULL == name)
+      return;
   if (!(f = fopen(name, "r")))
-    a->error("dump: Cannot open %s: %s", name, strerror(errno));
+    {
+      a->error("dump: Cannot open %s: %s", name, strerror(errno));
+      return;
+    }
   while (fgets(buf, sizeof(buf)-1, f))
     {
       char *z = strchr(buf, '\n');
@@ -73,6 +83,7 @@ dump_init(struct pci_access *a)
 	{
 	  fclose(f);
 	  a->error("dump: line too long or unterminated");
+          return;
 	}
       *z-- = 0;
       if (z >= buf && *z == '\r')
@@ -94,6 +105,12 @@ dump_init(struct pci_access *a)
 	{
 	  struct dump_data *dd = dev->aux;
 	  z = strchr(buf, ' ') + 1;
+          if (NULL == z)
+            {
+              fclose(f);
+              a->error("dump: Requested occurrence not found in line");
+              return;
+            }
 	  while (isxdigit(z[0]) && isxdigit(z[1]) && (!z[2] || z[2] == ' ') &&
 		 sscanf(z, "%x", &j) == 1 && j < 256)
 	    {
@@ -101,6 +118,7 @@ dump_init(struct pci_access *a)
 		{
 		  fclose(f);
 		  a->error("dump: At most 4096 bytes of config space are supported");
+                  return;
 		}
 	      if (i >= dd->allocated)	/* Need to re-allocate the buffer */
 		{
@@ -120,6 +138,7 @@ dump_init(struct pci_access *a)
 	    {
 	      fclose(f);
 	      a->error("dump: Malformed line");
+              return;
 	    }
 	}
     }

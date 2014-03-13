@@ -920,6 +920,8 @@ main(int argc, char **argv)
     }
 
   pacc = pci_alloc();
+  if (NULL == pacc)
+    return 0;
   pacc->error = die;
   pci_filter_init(pacc, &filter);
 

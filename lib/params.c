@@ -28,6 +28,11 @@ pci_define_param(struct pci_access *acc, char *param, char *value, char *help)
 {
   struct pci_param *p = pci_malloc(acc, sizeof(*p));
 
+  if (NULL == p)
+    {
+      acc->params = NULL;
+      return;
+    }
   p->next = acc->params;
   acc->params = p;
   p->param = param;

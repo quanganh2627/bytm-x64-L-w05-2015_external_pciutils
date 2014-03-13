@@ -26,7 +26,7 @@ static char *id_lookup(struct pci_access *a, int flags, int cat, int id1, int id
 	}
       if (flags & PCI_LOOKUP_NETWORK)
         {
-	  if (name = pci_id_net_lookup(a, cat, id1, id2, id3, id4))
+	  if (NULL != (name = pci_id_net_lookup(a, cat, id1, id2, id3, id4)))
 	    {
 	      pci_id_insert(a, cat, id1, id2, id3, id4, name, SRC_NET);
 	      pci_mfree(name);
@@ -115,7 +115,7 @@ pci_lookup_name(struct pci_access *a, char *buf, int size, int flags, ...)
   va_list args;
   char *v, *d, *cls, *pif;
   int iv, id, isv, isd, icls, ipif;
-  char numbuf[16], pifbuf[32];
+  char numbuf[32], pifbuf[32];
 
   va_start(args, flags);
 

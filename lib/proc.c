@@ -29,6 +29,9 @@ proc_detect(struct pci_access *a)
 {
   char *name = pci_get_param(a, "proc.path");
 
+  if (NULL == name)
+    return 0;
+
   if (access(name, R_OK))
     {
       a->warning("Cannot open %s", name);
@@ -59,16 +62,26 @@ proc_scan(struct pci_access *a)
 {
   FILE *f;
   char buf[512];
+  char *ch = NULL;
 
-  if (snprintf(buf, sizeof(buf), "%s/devices", pci_get_param(a, "proc.path")) == sizeof(buf))
-    a->error("File name too long");
+  if (snprintf(buf, sizeof(buf), "%s/devices",
+      ((ch = pci_get_param(a, "proc.path")) != NULL ? ch : "\0")) == sizeof(buf))
+    {
+      a->error("File name too long");
+      return;
+    }
   f = fopen(buf, "r");
   if (!f)
-    a->error("Cannot open %s", buf);
+    {
+      a->error("Cannot open %s", buf);
+      return;
+    }
   while (fgets(buf, sizeof(buf)-1, f))
     {
       struct pci_dev *d = pci_alloc_dev(a);
       unsigned int dfn, vend, cnt, known;
+      if (d == NULL)
+        break;
 
 #define F " " PCIADDR_T_FMT
       cnt = sscanf(buf, "%x %x %x" F F F F F F F F F F F F F F,
@@ -117,14 +130,17 @@ proc_setup(struct pci_dev *d, int rw)
 {
   struct pci_access *a = d->access;
 
+  if (NULL == a)
+    return -1;
   if (a->cached_dev != d || a->fd_rw < rw)
     {
       char buf[1024];
       int e;
+      char *ch = NULL;
       if (a->fd >= 0)
 	close(a->fd);
       e = snprintf(buf, sizeof(buf), "%s/%02x/%02x.%d",
-		   pci_get_param(a, "proc.path"),
+		   ((ch = pci_get_param(a, "proc.path")) != NULL ? ch : "\0"),
 		   d->bus, d->dev, d->func);
       if (e < 0 || e >= (int) sizeof(buf))
 	a->error("File name too long");
@@ -133,7 +149,7 @@ proc_setup(struct pci_dev *d, int rw)
       if (a->fd < 0)
 	{
 	  e = snprintf(buf, sizeof(buf), "%s/%04x:%02x/%02x.%d",
-		       pci_get_param(a, "proc.path"),
+		       ((ch = pci_get_param(a, "proc.path")) != NULL ? ch : "\0"),
 		       d->domain, d->bus, d->dev, d->func);
 	  if (e < 0 || e >= (int) sizeof(buf))
 	    a->error("File name too long");

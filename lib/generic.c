@@ -23,7 +23,8 @@ pci_generic_scan_bus(struct pci_access *a, byte *busmap, int bus)
       return;
     }
   busmap[bus] = 1;
-  t = pci_alloc_dev(a);
+  if (NULL == (t = pci_alloc_dev(a)))
+    return;
   t->bus = bus;
   for (dev=0; dev<32; dev++)
     {
@@ -40,7 +41,11 @@ pci_generic_scan_bus(struct pci_access *a, byte *busmap, int bus)
 	  if (!t->func)
 	    multi = ht & 0x80;
 	  ht &= 0x7f;
-	  d = pci_alloc_dev(a);
+	  if (NULL == (d = pci_alloc_dev(a)))
+            {
+              pci_free_dev(t);
+              return;
+            }
 	  d->bus = t->bus;
 	  d->dev = t->dev;
 	  d->func = t->func;

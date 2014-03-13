@@ -23,6 +23,8 @@ struct pci_dev *
 pci_alloc_dev(struct pci_access *a)
 {
   struct pci_dev *d = pci_malloc(a, sizeof(struct pci_dev));
+  if (NULL == d)
+    return NULL;
 
   memset(d, 0, sizeof(*d));
   d->access = a;
@@ -46,6 +48,8 @@ struct pci_dev *
 pci_get_dev(struct pci_access *a, int domain, int bus, int dev, int func)
 {
   struct pci_dev *d = pci_alloc_dev(a);
+  if (NULL == d)
+    return NULL;
 
   d->domain = domain;
   d->bus = bus;

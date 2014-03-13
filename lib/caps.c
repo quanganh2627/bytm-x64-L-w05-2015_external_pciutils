@@ -14,6 +14,8 @@ static void
 pci_add_cap(struct pci_dev *d, unsigned int addr, unsigned int id, unsigned int type)
 {
   struct pci_cap *cap = pci_malloc(d->access, sizeof(*cap));
+  if (NULL == cap)
+    return;
 
   cap->next = d->first_cap;
   d->first_cap = cap;

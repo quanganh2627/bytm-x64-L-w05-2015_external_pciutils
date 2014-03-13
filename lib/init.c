@@ -81,7 +81,8 @@ pci_strdup(struct pci_access *a, char *s)
 {
   int len = strlen(s) + 1;
   char *t = pci_malloc(a, len);
-  memcpy(t, s, len);
+  if (NULL != t)
+    memcpy(t, s, len);
   return t;
 }
 
@@ -151,6 +152,8 @@ pci_alloc(void)
   struct pci_access *a = malloc(sizeof(struct pci_access));
   int i;
 
+  if (NULL == a)
+    return NULL;
   memset(a, 0, sizeof(*a));
   pci_set_name_list_path(a, PCI_PATH_IDS_DIR "/" PCI_IDS, 0);
 #ifdef PCI_USE_DNS
@@ -199,7 +202,10 @@ pci_init(struct pci_access *a)
 	    a->debug("...No.\n");
 	  }
       if (!a->methods)
-	a->error("Cannot find any working access method.");
+        {
+          a->error("Cannot find any working access method.");
+          return;
+        }
     }
   a->debug("Decided to use %s\n", a->methods->name);
   a->methods->init(a);

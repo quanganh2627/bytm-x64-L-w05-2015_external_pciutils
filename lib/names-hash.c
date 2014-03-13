@@ -35,12 +35,16 @@ static void *id_alloc(struct pci_access *a, unsigned int size)
   if (!a->id_hash)
     {
       a->id_hash = pci_malloc(a, sizeof(struct id_entry *) * HASH_SIZE);
+      if (NULL == a->id_hash)
+        return NULL;
       memset(a->id_hash, 0, sizeof(struct id_entry *) * HASH_SIZE);
     }
 
   if (!buck || buck->full + size > BUCKET_SIZE)
     {
       buck = pci_malloc(a, BUCKET_SIZE);
+      if (NULL == buck)
+        return NULL;
       buck->next = a->current_id_bucket;
       a->current_id_bucket = buck;
       buck->full = BUCKET_ALIGN(sizeof(struct id_bucket));
@@ -72,6 +76,8 @@ pci_id_insert(struct pci_access *a, int cat, int id1, int id2, int id3, int id4,
   if (n)
     return 1;
   n = id_alloc(a, sizeof(struct id_entry) + len);
+  if (NULL == n)
+    return 1;
   n->id12 = id12;
   n->id34 = id34;
   n->cat = cat;
