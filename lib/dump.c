@@ -94,6 +94,12 @@ dump_init(struct pci_access *a)
 	  dump_validate(buf, "####:##:##.# ") && sscanf(buf, "%x:%x:%x.%d", &mn, &bn, &dn, &fn) == 4)
 	{
 	  dev = pci_get_dev(a, mn, bn, dn, fn);
+          if (NULL == dev)
+            {
+              fclose(f);
+              a->error("dump: pci_get_dev failed");
+              return;
+            }
 	  dump_alloc_data(dev, 256);
 	  pci_link_dev(a, dev);
 	}
